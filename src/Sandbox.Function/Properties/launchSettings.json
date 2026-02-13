@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Sandbox_Function": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7234",
+      "launchBrowser": false
+    }
+  }
+}

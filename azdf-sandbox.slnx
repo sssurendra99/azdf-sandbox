@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sandbox.Application/Sandbox.Application.csproj" />
+    <Project Path="src/Sandbox.Domain/Sandbox.Domain.csproj" />
+    <Project Path="src/Sandbox.Infrastructure/Sandbox.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Sandbox.Function/">
+    <Project Path="src/Sandbox.Function/Sandbox_Function.csproj" />
+  </Folder>
+</Solution>
