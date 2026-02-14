@@ -16,7 +16,7 @@ public class Email
         if (string.IsNullOrWhiteSpace(email))
             throw new DomainException("Email cannot be empty");
 
-        if (!email.Contains("@"))
+        if (!email.Contains('@'))
                 throw new DomainException("Invalid email format");
 
         return new Email(email);
