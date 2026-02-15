@@ -6,13 +6,15 @@ namespace Sandbox.Domain.Entities;
 
 public class Employee: BaseEntity
 {
+    public string EmployeeId { get; private set; }
     public string EmployeeName { get; private set; }
     public int EmployeeAge { get; private set; }
-    public Email? Email { get; private set; } 
+    public Email? Email { get; private set; }
     public string ClientId { get; private set; }
 
     private Employee()
     {
+        EmployeeId = string.Empty;
         ClientId = string.Empty;
         EmployeeName = string.Empty;
     }
@@ -38,10 +40,10 @@ public class Employee: BaseEntity
 
             var employee = new Employee
             {
+                EmployeeId = employeeId,
                 ClientId = clientId,
                 EmployeeName = employeeName,
                 EmployeeAge = employeeAge,
-                
             };
 
             if (!string.IsNullOrWhiteSpace(email))

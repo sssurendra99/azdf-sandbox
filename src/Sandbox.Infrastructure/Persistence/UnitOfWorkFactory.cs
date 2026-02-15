@@ -1,15 +1,15 @@
-using Microsoft.Extensions.Configuration;
 using Sandbox.Application.Abstractions.Persistence;
 
 namespace Sandbox.Infrastructure.Persistence;
+
 public class UnitOfWorkFactory : IUnitOfWorkFactory
 {
     private readonly string _connectionString;
 
-    public UnitOfWorkFactory(IConfiguration configuration)
+    public UnitOfWorkFactory(string connectionString)
     {
-        _connectionString = configuration["SqlConnectionString"]
-            ?? throw new ArgumentNullException("SqlConnectionString not configured");
+        _connectionString = connectionString
+            ?? throw new ArgumentNullException(nameof(connectionString), "SQL connection string not configured");
     }
 
     public IUnitOfWork Create()
