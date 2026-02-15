@@ -45,7 +45,6 @@ public class EmployeeQueueTrigger
 
             using var unitOfWork = _unitOfWorkFactory.Create();
 
-            // Create repositories
             var employeeRepo = new GenericRepository<Employee>(unitOfWork);
             var certificateRepo = new GenericRepository<Certificate>(unitOfWork);
 
@@ -58,7 +57,6 @@ public class EmployeeQueueTrigger
             {
                 _logger.LogInformation("Employee {EmployeeId} already exists, updating...", message.EmployeeId);
 
-                // Update existing employee using raw SQL
                 await employeeRepo.ExecuteAsync(
                     @"UPDATE Employees
                       SET EmployeeName = @EmployeeName,
@@ -75,7 +73,6 @@ public class EmployeeQueueTrigger
                         UpdatedAt = DateTime.UtcNow
                     });
 
-                // Delete existing certificates
                 await certificateRepo.ExecuteAsync(
                     "DELETE FROM Certificates WHERE EmployeeId = @EmployeeId",
                     new { EmployeeId = message.EmployeeId });
@@ -84,7 +81,6 @@ public class EmployeeQueueTrigger
             {
                 _logger.LogInformation("Creating new employee: {EmployeeId}", message.EmployeeId);
 
-                // Create new employee
                 var employee = Employee.Create(
                     employeeId: message.EmployeeId,
                     clientId: message.ClientId,
@@ -96,17 +92,19 @@ public class EmployeeQueueTrigger
             }
 
             // Insert certificates
-            foreach (var certDto in message.Certificates)
+            if (message.Certificates.Count > 0)
             {
-                var certificate = Certificate.Create(
-                    certificateId: certDto.CertificateId,
-                    certificateName: certDto.CertificateName,
-                    employeeId: message.EmployeeId);
+                var certificates = message.Certificates
+                    .Select(c => Certificate.Create(
+                        certificateId: c.CertificateId,
+                        certificateName: c.CertificateName,
+                        employeeId: message.EmployeeId))
+                    .ToList();
 
-                await certificateRepo.InsertAsync(certificate);
+                await certificateRepo.InsertRangeAsync(certificates);
 
-                _logger.LogInformation("Inserted certificate: {CertificateId} for employee {EmployeeId}",
-                    certDto.CertificateId, message.EmployeeId);
+                _logger.LogInformation("Inserted {CertCount} certificates for employee {EmployeeId}",
+                    certificates.Count, message.EmployeeId);
             }
 
             await unitOfWork.CompleteAsync();

@@ -61,7 +61,8 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
     private IEnumerable<PropertyInfo> GetInsertProperties()
     {
         return GetProperties()
-            .Where(p => p.Name != _primaryKeyName || _primaryKeyType != typeof(Guid));
+            .Where(p => p.Name != _primaryKeyName || _primaryKeyType != typeof(Guid))
+            .Where(p => p.Name != "UpdatedAt");
     }
 
     private IEnumerable<PropertyInfo> GetUpdateProperties()

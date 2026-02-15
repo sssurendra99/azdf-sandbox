@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Sandbox.Application.Abstractions.Services;
 using Sandbox.Application.DTOs;
 
@@ -27,8 +28,11 @@ public class BlobStorageService : IBlobStorageService
             ContentType = "application/pdf"
         });
 
+        // Generate a SAS URL valid for 24 hours
+        var sasUrl = GenerateSasUrl(blobClient, TimeSpan.FromHours(24));
+
         return new BlobUploadResult(
-            BlobUrl: blobClient.Uri.ToString(),
+            BlobUrl: sasUrl,
             BlobName: fileName,
             ContainerName: containerName
         );
@@ -54,5 +58,23 @@ public class BlobStorageService : IBlobStorageService
         var blobClient = containerClient.GetBlobClient(blobName);
         var response = await blobClient.DeleteIfExistsAsync();
         return response.Value;
+    }
+
+    private string GenerateSasUrl(BlobClient blobClient, TimeSpan validFor)
+    {
+        if (!blobClient.CanGenerateSasUri)
+            return blobClient.Uri.ToString();
+
+        var sasBuilder = new BlobSasBuilder
+        {
+            BlobContainerName = blobClient.BlobContainerName,
+            BlobName = blobClient.Name,
+            Resource = "b",
+            ExpiresOn = DateTimeOffset.UtcNow.Add(validFor)
+        };
+
+        sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+        return blobClient.GenerateSasUri(sasBuilder).ToString();
     }
 }

@@ -8,45 +8,21 @@ namespace Sandbox.Function.Functions;
 
 public class EmployeeActivities
 {
-    private readonly IQueueService _queueService;
     private readonly IPdfService _pdfService;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IEmailService _emailService;
     private readonly ILogger<EmployeeActivities> _logger;
 
-    private const string EmployeeQueueName = "employee-updates";
-
     public EmployeeActivities(
-        IQueueService queueService,
         IPdfService pdfService,
         IBlobStorageService blobStorageService,
         IEmailService emailService,
         ILogger<EmployeeActivities> logger)
     {
-        _queueService = queueService;
         _pdfService = pdfService;
         _blobStorageService = blobStorageService;
         _emailService = emailService;
         _logger = logger;
-    }
-
-    [Function(nameof(SendToQueueActivity))]
-    public async Task SendToQueueActivity([ActivityTrigger] EmployeeRequest request)
-    {
-        _logger.LogInformation("Sending employee {EmployeeId} to queue for DB update", request.EmployeeId);
-
-        var queueMessage = new EmployeeQueueMessage(
-            ClientId: request.ClientId,
-            EmployeeId: request.EmployeeId,
-            EmployeeName: request.EmployeeName,
-            EmployeeAge: request.EmployeeAge,
-            Email: request.Email,
-            Certificates: request.EmployeeCertificates
-        );
-
-        await _queueService.SendMessageAsync(EmployeeQueueName, queueMessage);
-
-        _logger.LogInformation("Employee {EmployeeId} sent to queue successfully", request.EmployeeId);
     }
 
     [Function(nameof(GeneratePdfActivity))]

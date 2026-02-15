@@ -3,6 +3,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
+using Sandbox.Application.Abstractions.Services;
 using Sandbox.Application.DTOs;
 using System.Net;
 using System.Text.Json;
@@ -11,10 +12,14 @@ namespace Sandbox.Function.Functions;
 
 public class EmployeeOrchestration
 {
+    private readonly IQueueService _queueService;
     private readonly ILogger<EmployeeOrchestration> _logger;
 
-    public EmployeeOrchestration(ILogger<EmployeeOrchestration> logger)
+    private const string EmployeeQueueName = "employee-updates";
+
+    public EmployeeOrchestration(IQueueService queueService, ILogger<EmployeeOrchestration> logger)
     {
+        _queueService = queueService;
         _logger = logger;
     }
 
@@ -47,7 +52,19 @@ public class EmployeeOrchestration
                 return badResponse;
             }
 
-            // Start the orchestration
+            // Send to queue for DB update (independent of orchestration)
+            var queueMessage = new EmployeeQueueMessage(
+                ClientId: employeeRequest.ClientId,
+                EmployeeId: employeeRequest.EmployeeId,
+                EmployeeName: employeeRequest.EmployeeName,
+                EmployeeAge: employeeRequest.EmployeeAge,
+                Email: employeeRequest.Email,
+                Certificates: employeeRequest.EmployeeCertificates);
+
+            await _queueService.SendMessageAsync(EmployeeQueueName, queueMessage);
+            _logger.LogInformation("Queue message sent for EmployeeId: {EmployeeId}", employeeRequest.EmployeeId);
+
+            // Start the orchestration (3 activities: PDF, Blob, Email)
             var instanceId = await client.ScheduleNewOrchestrationInstanceAsync(
                 nameof(EmployeeProcessingOrchestrator),
                 employeeRequest);
@@ -91,14 +108,7 @@ public class EmployeeOrchestration
 
         try
         {
-            // Activity 1: Send to Queue for DB update
-            await context.CallActivityAsync(
-                nameof(EmployeeActivities.SendToQueueActivity),
-                employeeRequest);
-            result.QueueMessageSent = true;
-            logger.LogInformation("Queue message sent for EmployeeId: {EmployeeId}", employeeRequest.EmployeeId);
-
-            // Activity 2: Generate PDF
+            // Activity 1: Generate PDF
             var pdfResult = await context.CallActivityAsync<PdfGenerationResult>(
                 nameof(EmployeeActivities.GeneratePdfActivity),
                 employeeRequest);
@@ -106,7 +116,7 @@ public class EmployeeOrchestration
             result.PdfFileName = pdfResult.FileName;
             logger.LogInformation("PDF generated: {FileName}", pdfResult.FileName);
 
-            // Activity 3: Store PDF in Blob Storage
+            // Activity 2: Store PDF in Blob Storage
             var blobResult = await context.CallActivityAsync<BlobUploadResult>(
                 nameof(EmployeeActivities.StorePdfInBlobActivity),
                 pdfResult);
@@ -114,7 +124,7 @@ public class EmployeeOrchestration
             result.BlobUrl = blobResult.BlobUrl;
             logger.LogInformation("PDF stored in blob: {BlobUrl}", blobResult.BlobUrl);
 
-            // Activity 4: Send Email notification
+            // Activity 3: Send Email notification
             var emailSent = await context.CallActivityAsync<bool>(
                 nameof(EmployeeActivities.SendEmailActivity),
                 employeeRequest);
@@ -140,7 +150,6 @@ public class OrchestrationResult
 {
     public string EmployeeId { get; set; } = string.Empty;
     public bool Success { get; set; }
-    public bool QueueMessageSent { get; set; }
     public bool PdfGenerated { get; set; }
     public string? PdfFileName { get; set; }
     public bool PdfStoredInBlob { get; set; }

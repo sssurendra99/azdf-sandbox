@@ -1,13 +1,3 @@
--- Create database if not exists
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'EmployeeDb')
-BEGIN
-    CREATE DATABASE EmployeeDb;
-END
-GO
-
-USE EmployeeDb;
-GO
-
 -- Create Employees table
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Employees' AND xtype='U')
 BEGIN
@@ -44,4 +34,3 @@ BEGIN
 END
 GO
 
-PRINT 'Database tables created successfully!';
